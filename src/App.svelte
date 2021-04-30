@@ -9,7 +9,7 @@
 	let color = d3.scaleOrdinal(['#7F3C8D','#11A579','#3969AC','#F2B701','#E73F74','#80BA5A','#E68310'])
 	
 	let el;
-	export let legend = []
+	export let legends = []
 
 	export let tooltipX = 0
 	export let tooltipY = 0
@@ -20,16 +20,24 @@
 
 		let PNNTData = await d3.csv("https://raw.githubusercontent.com/sapomnia/Piano-nazionale-di-ripartenza-e-resilienza/main/PNRR.csv", (obj) => 
                   ({...obj,
+										 missione: obj['Missione'].split(': ')[1],
                      value: parseFloat(obj['Spesa (mld €)'].replace(',','.'))
                    }))
 	
-		let groupedData = d3.group(PNNTData, d => d['Missione'], d => d['Componenti'], d=> d['Investimenti e riforme'])
-		legend = Array.from(groupedData.keys())
+		let groupedData = d3.group(PNNTData, d => d.missione, d => d['Componenti'], d=> d['Investimenti e riforme'])
+		
 		let rootNode = d3.hierarchy(groupedData)
 		let weightAccessor = (d) => d.value; // computes the weight of one of your data; depending on your data, it may be 'd.area', or 'd.percentage', ...
 		
 		rootNode.sum(weightAccessor)
 		
+		legends = rootNode.children.map(item => {
+			return {
+				label: item.data[0],
+				value: item.value
+			}
+		}).sort((a,b) => b.value - a.value)
+
 		let computeCirclingPolygon = (radius) => {
 			var _2PI = 2*Math.PI
 			var points = 180,
@@ -113,17 +121,17 @@
 		<div class="tooltip" style="top: {tooltipY}px; left:{tooltipX}px">{tooltipLabel}<div class="value">{tooltipValue}</div></div>
 	</div>
 	<div class="legend">
-		{#if legend.length}
-			{#each legend as g}
-			<div class="legend-item"><div class="dot" style="background-color: {color(g)}"></div>{g}</div>
+		{#if legends.length}
+			{#each legends as g}
+			<div class="legend-item"><div class="dot" style="background-color: {color(g.label)}"></div><div>{g.label} <b> {g.value.toFixed(2)} mld €</b></div></div>
 			{/each}
 		{/if}
 	</div>
 	<footer>
-		<div>Made with ❤️ for 🇮🇹  by <a href="https://twitter.com/pezzabros">Daniele Pezzatini(@pezzabros)</div>
-		<div>Data from <a href="https://github.com/sapomnia/Piano-nazionale-di-ripartenza-e-resilienza/blob/main/PNRR.csv">@sapomnia.</a></div>
-		<div>Chart inspired by this <a href="https://www.nytimes.com/2021/04/28/upshot/biden-families-plan-american-rescue-infrastructure.html">New York Times article.</a></div>
-		<div>Crafted with Svelte, D3, and D3 Voronoi Treemap. <a href="https://rawgraphs.io/">RawGraphs</a> for data exploration.</div>
+		<div>Developed by <a href="https://twitter.com/pezzabros">Daniele Pezzatini(@pezzabros)</div>
+		<div>Data from <a href="https://github.com/sapomnia/Piano-nazionale-di-ripartenza-e-resilienza/blob/main/PNRR.csv">@sapomnia</a></div>
+		<div>Chart inspired by this <a href="https://www.nytimes.com/2021/04/28/upshot/biden-families-plan-american-rescue-infrastructure.html">New York Times article</a></div>
+		<div>Crafted with Svelte, D3, D3 Voronoi Treemap, <a href="https://rawgraphs.io/">RawGraphs</a> for data exploration</div>
 		<div><a href="https://en.wikipedia.org/wiki/Voronoi_diagram">ℹ️  What is a Voronoi diagram?</a></div>
 	</footer>
 </main>
@@ -141,7 +149,6 @@
     height: 500px;
     margin: auto;
 		padding: 2em
-
 	}
 	.tooltip {
 		position:absolute;
@@ -153,8 +160,7 @@
 		text-align: center;
 		pointer-events:none;
 	}
-	.tooltip .value{
-		margin-left: 1em;
+	.value{
 		font-weight: bold;
 	}
 	svg {
@@ -165,13 +171,14 @@
 		width: 500px;
 		max-width: 500px;
 		margin: 10px auto;
+		font-size: 0.9em;
 	}
 	.legend-item {
 		display: flex;
 		align-items: center;
 		flex-wrap: nowrap;
 		margin-right: 10px;
-		height: 1.5em;
+		height: 1.3em;
 		
 	}
 	.dot{
@@ -180,6 +187,7 @@
 		max-height: 1em;
 		border-radius: 50%;
 		margin-right: 5px;
+		opacity: 0.7;
 	}
 	h1 {
 		font-size: 1.8em;
